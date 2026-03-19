@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>AND Network — Defect Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.3/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --dg: #215D5E; --mg: #00B48A; --lg: #EEF6E8;
+    --gray: #666666; --lgray: #D1D3D4; --white: #ffffff;
+    --radius: 8px; --shadow: 0 2px 8px rgba(33,93,94,0.12);
+    --shadow-lg: 0 8px 32px rgba(33,93,94,0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f4f3; color: #111; min-height: 100vh; }
+  #root { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* HEADER */
+  .header { background: var(--dg); color: white; padding: 0 16px; height: 56px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .header-logo { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: var(--mg); text-transform: uppercase; }
+  .header-title { font-size: 15px; font-weight: 600; flex: 1; }
+  .header-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .badge-staff { background: var(--mg); color: white; }
+  .badge-client { background: #4A90A4; color: white; }
+  .btn-back { background: rgba(255,255,255,0.15); border: none; color: white; cursor: pointer; padding: 6px 12px; border-radius: 6px; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+  .btn-back:hover { background: rgba(255,255,255,0.25); }
+
+  /* LAYOUT */
+  .page { flex: 1; padding: 16px; max-width: 900px; width: 100%; margin: 0 auto; }
+  .page-wide { flex: 1; padding: 0; width: 100%; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: var(--mg); color: white; }
+  .btn-primary:hover { background: #009e7a; }
+  .btn-secondary { background: white; color: var(--dg); border: 1.5px solid var(--lgray); }
+  .btn-secondary:hover { border-color: var(--mg); color: var(--mg); }
+  .btn-danger { background: #dc3545; color: white; }
+  .btn-danger:hover { background: #c82333; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-icon { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 6px; color: var(--gray); display: flex; align-items: center; }
+  .btn-icon:hover { background: var(--lg); color: var(--dg); }
+
+  /* CARDS */
+  .card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+  .card + .card { margin-top: 10px; }
+
+  /* LOGIN */
+  .login-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--dg); padding: 24px; }
+  .login-card { background: white; border-radius: 16px; padding: 40px 32px; width: 100%; max-width: 400px; box-shadow: var(--shadow-lg); text-align: center; }
+  .login-brand { font-size: 13px; font-weight: 700; letter-spacing: 0.15em; color: var(--mg); text-transform: uppercase; margin-bottom: 8px; }
+  .login-title { font-size: 24px; font-weight: 700; color: var(--dg); margin-bottom: 6px; }
+  .login-sub { font-size: 14px; color: var(--gray); margin-bottom: 32px; }
+  .login-btn { width: 100%; padding: 16px; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; margin-bottom: 12px; text-align: left; display: flex; align-items: center; gap: 14px; }
+  .login-btn-icon { width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .login-btn-staff { background: var(--lg); border-color: var(--dg); color: var(--dg); }
+  .login-btn-staff:hover { background: var(--dg); color: white; }
+  .login-btn-client { background: #EBF5FB; border-color: #4A90A4; color: #2C6E87; }
+  .login-btn-client:hover { background: #4A90A4; color: white; }
+  .login-btn-info { display: flex; flex-direction: column; }
+  .login-btn-label { font-weight: 700; font-size: 15px; }
+  .login-btn-desc { font-weight: 400; font-size: 12px; opacity: 0.75; margin-top: 2px; }
+
+  /* PROJECTS */
+  .projects-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .section-title { font-size: 18px; font-weight: 700; color: var(--dg); }
+  .project-card { display: flex; align-items: center; gap: 14px; cursor: pointer; padding: 14px 16px; border-left: 4px solid var(--mg); transition: all 0.15s; }
+  .project-card:hover { background: var(--lg); }
+  .project-icon { width: 40px; height: 40px; background: var(--lg); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .project-info { flex: 1; }
+  .project-name { font-weight: 600; font-size: 15px; color: var(--dg); }
+  .project-meta { font-size: 12px; color: var(--gray); margin-top: 2px; }
+  .project-count { font-size: 12px; font-weight: 600; color: var(--mg); background: var(--lg); padding: 4px 10px; border-radius: 12px; }
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--gray); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-title { font-size: 16px; font-weight: 600; color: var(--dg); margin-bottom: 6px; }
+
+  /* REGISTER */
+  .register-header { background: white; padding: 12px 16px; border-bottom: 2px solid var(--lg); position: sticky; top: 56px; z-index: 90; }
+  .register-meta { font-size: 12px; color: var(--gray); margin-bottom: 10px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filter-select { padding: 6px 10px; border: 1.5px solid var(--lgray); border-radius: 6px; font-family: inherit; font-size: 13px; color: var(--dg); background: white; cursor: pointer; }
+  .filter-select:focus { outline: none; border-color: var(--mg); }
+  .filter-active { border-color: var(--mg); background: var(--lg); color: var(--dg); font-weight: 600; }
+  .filter-input { padding: 6px 10px; border: 1.5px solid var(--lgray); border-radius: 6px; font-family: inherit; font-size: 13px; color: #111; background: white; width: 160px; }
+  .filter-input:focus { outline: none; border-color: var(--mg); }
+  .register-actions { display: flex; gap: 8px; margin-left: auto; }
+  .register-body { padding: 12px 16px; }
+  .register-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .stat-card { background: white; border-radius: 8px; padding: 12px; text-align: center; border-left: 3px solid var(--mg); }
+  .stat-num { font-size: 22px; font-weight: 700; color: var(--dg); }
+  .stat-label { font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+  /* DEFECT TABLE */
+  .defect-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: var(--shadow); }
+  .defect-table th { background: var(--dg); color: white; padding: 10px 12px; font-size: 12px; font-weight: 600; text-align: left; white-space: nowrap; }
+  .defect-table td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid var(--lg); vertical-align: middle; }
+  .defect-table tr:hover td { background: #f8fffe; cursor: pointer; }
+  .defect-table tr:last-child td { border-bottom: none; }
+  .defect-id { font-weight: 700; color: var(--dg); font-size: 12px; }
+  .defect-desc { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .photo-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; border: 1px solid var(--lgray); }
+  .photo-placeholder { width: 36px; height: 36px; background: var(--lg); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--gray); }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-minor { background: #FFF3CD; color: #856404; }
+  .badge-major { background: #FFE0CC; color: #7B3500; }
+  .badge-critical { background: #FFCCCC; color: #7B0000; }
+  .badge-open { background: #FFCCCC; color: #7B0000; }
+  .badge-inprogress { background: #FFF3CD; color: #856404; }
+  .badge-closed { background: #D4EDDA; color: #155724; }
+  .badge-disputed { background: #E2D9F3; color: #4A1A7B; }
+
+  /* FAB */
+  .fab { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--mg); color: white; border: none; cursor: pointer; font-size: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0,180,138,0.4); transition: all 0.2s; z-index: 200; }
+  .fab:hover { background: #009e7a; transform: scale(1.08); }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: flex; align-items: flex-end; }
+  .modal-overlay.center { align-items: center; justify-content: center; }
+  .modal { background: white; border-radius: 16px 16px 0 0; width: 100%; max-height: 92vh; overflow-y: auto; padding: 20px; }
+  .modal.center-modal { border-radius: 16px; max-width: 520px; width: 100%; margin: 16px; max-height: 85vh; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--lg); }
+  .modal-title { font-size: 17px; font-weight: 700; color: var(--dg); }
+  .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--gray); line-height: 1; padding: 2px; }
+
+  /* FORMS */
+  .form-group { margin-bottom: 14px; }
+  .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--dg); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .form-label .required { color: #dc3545; margin-left: 2px; }
+  .form-input, .form-select, .form-textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--lgray); border-radius: 6px; font-family: inherit; font-size: 14px; color: #111; background: white; transition: border-color 0.15s; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--mg); }
+  .form-textarea { min-height: 80px; resize: vertical; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-actions { display: flex; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--lg); }
+
+  /* PHOTOS */
+  .photo-upload-area { border: 2px dashed var(--lgray); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .photo-upload-area:hover { border-color: var(--mg); background: var(--lg); }
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .photo-item { position: relative; aspect-ratio: 1; }
+  .photo-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; border: 1px solid var(--lgray); }
+  .photo-remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .photo-annotate-btn { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); background: rgba(33,93,94,0.85); color: white; border: none; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; padding: 3px 8px; white-space: nowrap; }
+
+  /* ANNOTATE VIEW */
+  .annotate-overlay { position: fixed; inset: 0; background: #000; z-index: 500; display: flex; flex-direction: column; }
+  .annotate-toolbar { background: var(--dg); padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .annotate-canvas-wrap { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 8px; }
+  canvas.annotate-canvas { max-width: 100%; max-height: 100%; cursor: crosshair; touch-action: none; }
+  .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+  .color-btn.active { border-color: white; transform: scale(1.2); }
+  .size-btn { background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 12px; }
+  .size-btn.active { background: var(--mg); }
+
+  /* DETAIL VIEW */
+  .detail-section { margin-bottom: 20px; }
+  .detail-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray); margin-bottom: 4px; }
+  .detail-value { font-size: 14px; color: #111; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .detail-photos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .detail-photos img { width: 100%; border-radius: 8px; border: 1px solid var(--lgray); cursor: pointer; }
+  .status-select { padding: 5px 10px; border: 1.5px solid var(--lgray); border-radius: 6px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; background: white; }
+
+  /* PROJECT FORM */
+  .tag-input-area { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1.5px solid var(--lgray); border-radius: 6px; min-height: 44px; cursor: text; }
+  .tag { background: var(--lg); color: var(--dg); border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+  .tag button { background: none; border: none; cursor: pointer; color: var(--gray); font-size: 14px; line-height: 1; padding: 0 2px; }
+  .tag-input { border: none; outline: none; font-family: inherit; font-size: 13px; flex: 1; min-width: 80px; }
+
+  /* NOTIFICATION */
+  .toast { position: fixed; top: 68px; left: 50%; transform: translateX(-50%); background: var(--dg); color: white; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 1000; box-shadow: var(--shadow-lg); animation: fadeIn 0.2s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+  /* LIGHT PHOTO VIEWER */
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 600; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 8px; }
+  .lightbox-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  @media (max-width: 600px) {
+    .register-stats { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .filters { gap: 6px; }
+    .filter-input { width: 120px; }
+    .page { padding: 10px; }
+  }
+  @media (min-width: 700px) {
+    .modal-overlay { align-items: center; justify-content: center; }
+    .modal { border-radius: 16px; max-width: 600px; max-height: 88vh; margin: 16px; }
+    .register-body { padding: 16px 20px; }
+    .register-header { padding: 12px 20px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── Helpers ───────────────────────────────────────────────
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-AU') : '—';
+const seqId = (n) => 'D-' + String(n).padStart(3,'0');
+
+async function stor(key) {
+  try { const r = await window.storage.get(key); return r ? JSON.parse(r.value) : null; } catch { return null; }
+}
+async function storSet(key, val) {
+  try { await window.storage.set(key, JSON.stringify(val)); } catch(e){console.error(e);}
+}
+async function storDel(key) {
+  try { await window.storage.delete(key); } catch{}
+}
+
+const severityClass = s => ({Minor:'badge-minor',Major:'badge-major',Critical:'badge-critical'}[s]||'badge-minor');
+const statusClass = s => ({Open:'badge-open','In Progress':'badge-inprogress',Closed:'badge-closed',Disputed:'badge-disputed'}[s]||'badge-open');
+
+function compressImage(dataUrl, maxPx=800, quality=0.72) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx/Math.max(img.width,img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width*scale);
+      c.height = Math.round(img.height*scale);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      res(c.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  });
+}
+
+// ─── Tag Input ─────────────────────────────────────────────
+function TagInput({ tags, onChange, placeholder }) {
+  const [input, setInput] = useState('');
+  const ref = useRef();
+  const add = (v) => { const t = v.trim(); if(t && !tags.includes(t)) onChange([...tags,t]); setInput(''); };
+  const remove = (t) => onChange(tags.filter(x=>x!==t));
+  const onKey = e => { if(e.key==='Enter'||e.key===','){e.preventDefault();add(input);} if(e.key==='Backspace'&&!input&&tags.length) onChange(tags.slice(0,-1)); };
+  return (
+    <div className="tag-input-area" onClick={()=>ref.current.focus()}>
+      {tags.map(t=><span key={t} className="tag">{t}<button onClick={e=>{e.stopPropagation();remove(t);}}>×</button></span>)}
+      <input ref={ref} className="tag-input" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={onKey} onBlur={()=>add(input)} placeholder={tags.length?'':placeholder}/>
+    </div>
+  );
+}
+
+// ─── Photo Annotation ──────────────────────────────────────
+function AnnotateView({ src, onSave, onCancel }) {
+  const canvasRef = useRef();
+  const [drawing, setDrawing] = useState(false);
+  const [tool, setTool] = useState('pen');
+  const [color, setColor] = useState('#FF0000');
+  const [size, setSize] = useState(3);
+  const [history, setHistory] = useState([]);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const lastPos = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      const maxW = window.innerWidth - 16;
+      const maxH = window.innerHeight - 120;
+      const scale = Math.min(1, maxW/img.width, maxH/img.height);
+      canvas.width = Math.round(img.width*scale);
+      canvas.height = Math.round(img.height*scale);
+      canvas.dataset.scale = scale;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      setImgLoaded(true);
+    };
+    img.src = src;
+  }, [src]);
+
+  const getPos = (e, canvas) => {
+    const r = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - r.left, y: clientY - r.top };
+  };
+
+  const saveSnapshot = () => {
+    const canvas = canvasRef.current;
+    setHistory(h => [...h.slice(-19), canvas.toDataURL()]);
+  };
+
+  const startDraw = (e) => {
+    e.preventDefault();
+    saveSnapshot();
+    const pos = getPos(e, canvasRef.current);
+    lastPos.current = pos;
+    setDrawing(true);
+    if(tool === 'arrow') return;
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, size/2, 0, Math.PI*2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+
+  const doDraw = (e) => {
+    e.preventDefault();
+    if(!drawing) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const pos = getPos(e, canvas);
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    lastPos.current = pos;
+  };
+
+  const endDraw = (e) => {
+    e.preventDefault();
+    if(!drawing) return;
+    if(tool === 'arrow' && lastPos.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const pos = getPos(e, canvas);
+      drawArrow(ctx, lastPos.current.x, lastPos.current.y, pos.x, pos.y, color, size);
+    }
+    setDrawing(false);
+  };
+
+  const drawArrow = (ctx, fx, fy, tx, ty, c, s) => {
+    const headLen = 16 + s*2;
+    const angle = Math.atan2(ty-fy, tx-fx);
+    ctx.strokeStyle=c; ctx.fillStyle=c; ctx.lineWidth=s; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(tx,ty); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tx,ty);
+    ctx.lineTo(tx-headLen*Math.cos(angle-Math.PI/7), ty-headLen*Math.sin(angle-Math.PI/7));
+    ctx.lineTo(tx-headLen*Math.cos(angle+Math.PI/7), ty-headLen*Math.sin(angle+Math.PI/7));
+    ctx.closePath(); ctx.fill();
+  };
+
+  const undo = () => {
+    if(!history.length) return;
+    const prev = history[history.length-1];
+    setHistory(h => h.slice(0,-1));
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0);
+    img.src = prev;
+  };
+
+  const save = () => {
+    const data = canvasRef.current.toDataURL('image/jpeg', 0.85);
+    onSave(data);
+  };
+
+  const COLORS = ['#FF0000','#FF6B00','#FFDD00','#00B48A','#0080FF','#FFFFFF','#000000'];
+
+  return (
+    <div className="annotate-overlay">
+      <div className="annotate-toolbar">
+        <button className="btn-back" onClick={onCancel} style={{marginRight:4}}>✕ Cancel</button>
+        <div style={{width:1,height:24,background:'rgba(255,255,255,0.2)'}}/>
+        {['pen','arrow'].map(t=>(
+          <button key={t} className="size-btn" style={{background:tool===t?'#00B48A':'rgba(255,255,255,0.15)',color:'white'}} onClick={()=>setTool(t)}>
+            {t==='pen'?'✏️ Pen':'➡️ Arrow'}
+          </button>
+        ))}
+        <div style={{width:1,height:24,background:'rgba(255,255,255,0.2)'}}/>
+        {COLORS.map(c=>(
+          <button key={c} className="color-btn" style={{background:c,borderColor:color===c?'white':'rgba(255,255,255,0.3)'}} onClick={()=>setColor(c)}/>
+        ))}
+        <div style={{width:1,height:24,background:'rgba(255,255,255,0.2)'}}/>
+        {[2,4,8].map(s=>(
+          <button key={s} className="size-btn" style={{background:size===s?'#00B48A':'rgba(255,255,255,0.15)',color:'white'}} onClick={()=>setSize(s)}>
+            {s===2?'S':s===4?'M':'L'}
+          </button>
+        ))}
+        <button className="size-btn" style={{marginLeft:'auto'}} onClick={undo} disabled={!history.length}>↩ Undo</button>
+        <button className="btn btn-primary btn-sm" onClick={save}>✓ Save</button>
+      </div>
+      <div className="annotate-canvas-wrap">
+        {!imgLoaded && <div style={{color:'white',fontSize:14}}>Loading image…</div>}
+        <canvas ref={canvasRef} className="annotate-canvas"
+          onMouseDown={startDraw} onMouseMove={doDraw} onMouseUp={endDraw} onMouseLeave={endDraw}
+          onTouchStart={startDraw} onTouchMove={doDraw} onTouchEnd={endDraw}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Project Form Modal ────────────────────────────────────
+function ProjectModal({ onSave, onClose }) {
+  const [form, setForm] = useState({ name:'', client:'', contractors:[], areas:[] });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const submit = () => {
+    if(!form.name.trim()) return;
+    onSave({ id:uid(), ...form, name:form.name.trim(), client:form.client.trim(), createdAt:new Date().toISOString() });
+  };
+  return (
+    <div className="modal-overlay center" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal center-modal">
+        <div className="modal-header">
+          <span className="modal-title">New Project</span>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Project Name <span className="required">*</span></label>
+          <input className="form-input" value={form.name} onChange={e=>set('name',e.target.value)} placeholder="e.g. Toyota Altona EV Charger Rollout"/>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Client</label>
+          <input className="form-input" value={form.client} onChange={e=>set('client',e.target.value)} placeholder="e.g. Toyota Australia"/>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Contractors <span style={{color:'-gray',fontSize:11,fontWeight:400,textTransform:'none'}}>— press Enter to add</span></label>
+          <TagInput tags={form.contractors} onChange={v=>set('contractors',v)} placeholder="Add contractor name…"/>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Areas / Locations <span style={{color:'var(--gray)',fontSize:11,fontWeight:400,textTransform:'none'}}>— press Enter to add</span></label>
+          <TagInput tags={form.areas} onChange={v=>set('areas',v)} placeholder="Add area or location…"/>
+        </div>
+        <div className="form-actions">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={submit} disabled={!form.name.trim()}>Create Project</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Defect Form ───────────────────────────────────────────
+function DefectModal({ project, defect, onSave, onClose }) {
+  const editing = !!defect;
+  const [form, setForm] = useState(defect ? {...defect} : {
+    area:'', contractor:'', description:'', severity:'Minor',
+    status:'Open', dueDate:'', notes:'', photos:[]
+  });
+  const [annotating, setAnnotating] = useState(null); // {idx, src}
+  const fileRef = useRef();
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const addPhotos = async (files) => {
+    const newPhotos = [];
+    for(const f of Array.from(files).slice(0, 5-form.photos.length)) {
+      const reader = new FileReader();
+      const dataUrl = await new Promise(res=>{reader.onload=e=>res(e.target.result);reader.readAsDataURL(f);});
+      const compressed = await compressImage(dataUrl);
+      newPhotos.push(compressed);
+    }
+    set('photos', [...form.photos, ...newPhotos]);
+  };
+
+  const removePhoto = (i) => set('photos', form.photos.filter((_,j)=>j!==i));
+  
+  const saveAnnotation = (i, data) => {
+    const photos = [...form.photos];
+    photos[i] = data;
+    set('photos', photos);
+    setAnnotating(null);
+  };
+
+  const submit = () => {
+    if(!form.description.trim()) return;
+    onSave(form);
+  };
+
+  if(annotating !== null) {
+    return <AnnotateView src={annotating.src} onSave={d=>saveAnnotation(annotating.idx,d)} onCancel={()=>setAnnotating(null)}/>;
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <span className="modal-title">{editing?'Edit Defect':'Raise Defect'}</span>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Area <span className="required">*</span></label>
+            {project.areas.length ? (
+              <select className="form-select" value={form.area} onChange={e=>set('area',e.target.value)}>
+                <option value="">Select area…</option>
+                {project.areas.map(a=><option key={a}>{a}</option>)}
+                <option value="__other__">Other…</option>
+              </select>
+            ) : (
+              <input className="form-input" value={form.area} onChange={e=>set('area',e.target.value)} placeholder="Area / location"/>
+            )}
+            {form.area==='__other__' && <input className="form-input" style={{marginTop:6}} value={form.areaCustom||''} onChange={e=>set('areaCustom',e.target.value)} placeholder="Describe area…"/>}
+          </div>
+          <div className="form-group">
+            <label className="form-label">Contractor <span className="required">*</span></label>
+            {project.contractors.length ? (
+              <select className="form-select" value={form.contractor} onChange={e=>set('contractor',e.target.value)}>
+                <option value="">Select contractor…</option>
+                {project.contractors.map(c=><option key={c}>{c}</option>)}
+              </select>
+            ) : (
+              <input className="form-input" value={form.contractor} onChange={e=>set('contractor',e.target.value)} placeholder="Contractor name"/>
+            )}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Description <span className="required">*</span></label>
+          <textarea className="form-textarea" value={form.description} onChange={e=>set('description',e.target.value)} placeholder="Clear description of the defect…"/>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Severity <span className="required">*</span></label>
+            <select className="form-select" value={form.severity} onChange={e=>set('severity',e.target.value)}>
+              <option>Minor</option><option>Major</option><option>Critical</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Status</label>
+            <select className="form-select" value={form.status} onChange={e=>set('status',e.target.value)}>
+              <option>Open</option><option>In Progress</option><option>Closed</option><option>Disputed</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Due Date</label>
+            <input type="date" className="form-input" value={form.dueDate} onChange={e=>set('dueDate',e.target.value)}/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Notes</label>
+            <input className="form-input" value={form.notes} onChange={e=>set('notes',e.target.value)} placeholder="Additional notes…"/>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Photos ({form.photos.length}/5)</label>
+          {form.photos.length < 5 && (
+            <div className="photo-upload-area" onClick={()=>fileRef.current.click()}>
+              <div style={{fontSize:28,marginBottom:6}}>📷</div>
+              <div style={{fontSize:13,color:'var(--gray)'}}>Tap to add photos</div>
+              <input ref={fileRef} type="file" accept="image/*" multiple capture="environment" style={{display:'none'}} onChange={e=>addPhotos(e.target.files)}/>
+            </div>
+          )}
+          {form.photos.length > 0 && (
+            <div className="photo-grid">
+              {form.photos.map((p,i)=>(
+                <div key={i} className="photo-item">
+                  <img src={p} alt={`Photo ${i+1}`}/>
+                  <button className="photo-remove" onClick={()=>removePhoto(i)}>×</button>
+                  <button className="photo-annotate-btn" onClick={()=>setAnnotating({idx:i,src:p})}>✏️ Annotate</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="form-actions">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={submit} disabled={!form.description.trim()}>
+            {editing ? 'Save Changes' : 'Raise Defect'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Defect Detail Modal ───────────────────────────────────
+function DefectDetail({ defect, project, isClient, onClose, onEdit, onStatusChange, onDelete }) {
+  const [lightbox, setLightbox] = useState(null);
+  const area = defect.area === '__other__' ? (defect.areaCustom||'Other') : defect.area;
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div>
+            <span className="modal-title">{defect.seqId}</span>
+            <span className={`badge ${severityClass(defect.severity)}`} style={{marginLeft:8}}>{defect.severity}</span>
+          </div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="detail-grid" style={{marginBottom:16}}>
+          <div><div className="detail-label">Status</div>
+            {isClient ? <span className={`badge ${statusClass(defect.status)}`}>{defect.status}</span> : (
+              <select className="status-select" value={defect.status} onChange={e=>onStatusChange(e.target.value)}>
+                <option>Open</option><option>In Progress</option><option>Closed</option><option>Disputed</option>
+              </select>
+            )}
+          </div>
+          <div><div className="detail-label">Raised</div><div className="detail-value">{fmtDate(defect.createdAt)}</div></div>
+          <div><div className="detail-label">Area</div><div className="detail-value">{area||'—'}</div></div>
+          <div><div className="detail-label">Contractor</div><div className="detail-value">{defect.contractor||'—'}</div></div>
+          {defect.dueDate && <div><div className="detail-label">Due Date</div><div className="detail-value">{fmtDate(defect.dueDate)}</div></div>}
+          <div><div className="detail-label">Raised By</div><div className="detail-value">{defect.raisedBy||'AND Network'}</div></div>
+        </div>
+
+        <div className="detail-section">
+          <div className="detail-label">Description</div>
+          <div className="detail-value" style={{lineHeight:1.5}}>{defect.description}</div>
+        </div>
+
+        {defect.notes && <div className="detail-section">
+          <div className="detail-label">Notes</div>
+          <div className="detail-value" style={{lineHeight:1.5,color:'var(--gray)'}}>{defect.notes}</div>
+        </div>}
+
+        {defect.photos?.length > 0 && (
+          <div className="detail-section">
+            <div className="detail-label">Photos ({defect.photos.length})</div>
+            <div className="detail-photos">
+              {defect.photos.map((p,i)=><img key={i} src={p} alt="" onClick={()=>setLightbox(p)}/>)}
+            </div>
+          </div>
+        )}
+
+        {!isClient && (
+          <div className="form-actions">
+            <button className="btn btn-danger btn-sm" onClick={onDelete}>Delete</button>
+            <button className="btn btn-secondary" style={{marginLeft:'auto'}} onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={onEdit}>Edit</button>
+          </div>
+        )}
+
+        {lightbox && (
+          <div className="lightbox" onClick={()=>setLightbox(null)}>
+            <button className="lightbox-close" onClick={()=>setLightbox(null)}>×</button>
+            <img src={lightbox} alt=""/>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Export ────────────────────────────────────────────────
+function exportToExcel(project, defects) {
+  const wb = XLSX.utils.book_new();
+  const rows = defects.map(d => ({
+    'ID': d.seqId,
+    'Date Raised': fmtDate(d.createdAt),
+    'Area': d.area==='__other__'?(d.areaCustom||'Other'):d.area||'',
+    'Contractor': d.contractor||'',
+    'Description': d.description,
+    'Severity': d.severity,
+    'Status': d.status,
+    'Due Date': fmtDate(d.dueDate),
+    'Notes': d.notes||'',
+    'Photos': (d.photos||[]).length,
+    'Raised By': d.raisedBy||'AND Network',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [8,12,18,18,40,10,14,12,24,8,16].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, 'Defect Register');
+
+  // Summary sheet
+  const statuses = ['Open','In Progress','Closed','Disputed'];
+  const severities = ['Minor','Major','Critical'];
+  const summaryData = [
+    ['Project', project.name],['Client',project.client||''],['Export Date',fmtDate(new Date())],['Total Defects',defects.length],[''],
+    ['BY STATUS',''],
+    ...statuses.map(s=>[s, defects.filter(d=>d.status===s).length]),
+    [''],['BY SEVERITY',''],
+    ...severities.map(s=>[s, defects.filter(d=>d.severity===s).length]),
+    [''],['BY CONTRACTOR',''],
+    ...[...new Set(defects.map(d=>d.contractor).filter(Boolean))].map(c=>[c,defects.filter(d=>d.contractor===c).length]),
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+  ws2['!cols'] = [{wch:20},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
+
+  const fname = `${project.name.replace(/[^a-zA-Z0-9]/g,'_')}_DefectRegister_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
+}
+
+// ─── Main App ──────────────────────────────────────────────
+export default function App() {
+  const [view, setView] = useState('login');
+  const [role, setRole] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [defects, setDefects] = useState([]); // all defects across all projects
+  const [currentProject, setCurrentProject] = useState(null);
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [addDefect, setAddDefect] = useState(false);
+  const [editDefect, setEditDefect] = useState(null);
+  const [viewDefect, setViewDefect] = useState(null);
+  const [filters, setFilters] = useState({status:'',contractor:'',area:'',severity:'',search:''});
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef();
+
+  const showToast = (msg) => {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(()=>setToast(null), 2800);
+  };
+
+  useEffect(()=>{
+    (async()=>{
+      const p = await stor('andn:projects') || [];
+      const d = await stor('andn:defects') || [];
+      setProjects(p); setDefects(d); setLoading(false);
+    })();
+  },[]);
+
+  const saveProjects = (p) => { setProjects(p); storSet('andn:projects', p); };
+  const saveDefects = (d) => { setDefects(d); storSet('andn:defects', d); };
+
+  const projectDefects = currentProject ? defects.filter(d=>d.projectId===currentProject.id) : [];
+
+  const filtered = projectDefects.filter(d=>{
+    if(filters.status && d.status!==filters.status) return false;
+    if(filters.severity && d.severity!==filters.severity) return false;
+    if(filters.contractor && d.contractor!==filters.contractor) return false;
+    if(filters.area && d.area!==filters.area) return false;
+    if(filters.search) {
+      const q = filters.search.toLowerCase();
+      if(!d.description?.toLowerCase().includes(q) && !d.seqId?.toLowerCase().includes(q) && !d.notes?.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const createProject = (proj) => {
+    const updated = [...projects, proj];
+    saveProjects(updated);
+    setShowNewProject(false);
+    showToast('Project created');
+  };
+
+  const raiseDefect = (form) => {
+    const seq = projectDefects.length + 1;
+    const newDefect = {
+      ...form,
+      id: uid(),
+      projectId: currentProject.id,
+      seqId: seqId(seq),
+      createdAt: new Date().toISOString(),
+      raisedBy: role==='client' ? 'Client' : 'AND Network',
+    };
+    const updated = [...defects, newDefect];
+    saveDefects(updated);
+    setAddDefect(false);
+    showToast(`${newDefect.seqId} raised`);
+  };
+
+  const updateDefect = (form) => {
+    const updated = defects.map(d=>d.id===editDefect.id?{...d,...form}:d);
+    saveDefects(updated);
+    setEditDefect(null);
+    setViewDefect(null);
+    showToast('Defect updated');
+  };
+
+  const updateStatus = (defectId, status) => {
+    const updated = defects.map(d=>d.id===defectId?{...d,status}:d);
+    saveDefects(updated);
+    setViewDefect(vd=>vd?{...vd,status}:vd);
+    showToast(`Status → ${status}`);
+  };
+
+  const deleteDefect = (defectId) => {
+    if(!confirm('Delete this defect? This cannot be undone.')) return;
+    saveDefects(defects.filter(d=>d.id!==defectId));
+    setViewDefect(null);
+    showToast('Defect deleted');
+  };
+
+  const setFilter = (k,v) => setFilters(f=>({...f,[k]:v}));
+  const clearFilters = () => setFilters({status:'',contractor:'',area:'',severity:'',search:''});
+  const hasFilters = Object.values(filters).some(Boolean);
+
+  const stats = {
+    total: projectDefects.length,
+    open: projectDefects.filter(d=>d.status==='Open').length,
+    critical: projectDefects.filter(d=>d.severity==='Critical').length,
+    closed: projectDefects.filter(d=>d.status==='Closed').length,
+  };
+
+  if(loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'var(--dg)',fontSize:14}}>Loading…</div>;
+
+  // ── LOGIN ─────────────────────────────────────────────────
+  if(view==='login') return (
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-brand">AND Network</div>
+        <div className="login-title">Defect Tracker</div>
+        <div className="login-sub">Field inspection & defect management</div>
+        <button className="login-btn login-btn-staff" onClick={()=>{setRole('staff');setView('projects');}}>
+          <div className="login-btn-icon" style={{background:'var(--lg)'}}>🔧</div>
+          <div className="login-btn-info">
+            <span className="login-btn-label">AND Network Staff</span>
+            <span className="login-btn-desc">Raise defects, manage register, export</span>
+          </div>
+        </button>
+        <button className="login-btn login-btn-client" onClick={()=>{setRole('client');setView('projects');}}>
+          <div className="login-btn-icon" style={{background:'#EBF5FB'}}>👁</div>
+          <div className="login-btn-info">
+            <span className="login-btn-label">Client View</span>
+            <span className="login-btn-desc">Read-only access to defect register</span>
+          </div>
+        </button>
+        <div style={{marginTop:20,fontSize:11,color:'var(--lgray)',lineHeight:1.5}}>
+          SOP-02 §3.21 Practical Completion · andnetwork.com.au
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── HEADER ────────────────────────────────────────────────
+  const Header = ({title, back, backLabel}) => (
+    <div className="header">
+      {back && <button className="btn-back" onClick={back}>← {backLabel||'Back'}</button>}
+      <div className="header-logo">AND</div>
+      <div className="header-title">{title}</div>
+      <span className={`header-badge ${role==='staff'?'badge-staff':'badge-client'}`}>
+        {role==='staff'?'Staff':'Client'}
+      </span>
+      <button className="btn-back" style={{marginLeft:4}} onClick={()=>{setView('login');setCurrentProject(null);}}>⏎</button>
+    </div>
+  );
+
+  // ── PROJECTS ──────────────────────────────────────────────
+  if(view==='projects') return (
+    <div style={{display:'flex',flexDirection:'column',minHeight:'100vh'}}>
+      <Header title="Projects"/>
+      <div className="page">
+        <div className="projects-header">
+          <span className="section-title">Projects</span>
+          {role==='staff' && <button className="btn btn-primary" onClick={()=>setShowNewProject(true)}>+ New Project</button>}
+        </div>
+
+        {projects.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📋</div>
+            <div className="empty-title">No projects yet</div>
+            <div style={{fontSize:13,marginBottom:16}}>Create your first project to start tracking defects.</div>
+            {role==='staff' && <button className="btn btn-primary" onClick={()=>setShowNewProject(true)}>+ Create Project</button>}
+          </div>
+        ) : projects.map(p=>{
+          const count = defects.filter(d=>d.projectId===p.id).length;
+          const openCount = defects.filter(d=>d.projectId===p.id&&d.status==='Open').length;
+          return (
+            <div key={p.id} className="card project-card" onClick={()=>{setCurrentProject(p);setView('register');}}>
+              <div className="project-icon">⚡</div>
+              <div className="project-info">
+                <div className="project-name">{p.name}</div>
+                <div className="project-meta">{p.client||'No client'} · {count} defect{count!==1?'s':''}{openCount>0?` · ${openCount} open`:''}</div>
+              </div>
+              <span className={`project-count`} style={{background:openCount>0?'#FFE0CC':undefined,color:openCount>0?'#7B3500':undefined}}>
+                {openCount>0?`${openCount} open`:`${count} total`}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      {showNewProject && <ProjectModal onSave={createProject} onClose={()=>setShowNewProject(false)}/>}
+    </div>
+  );
+
+  // ── REGISTER ──────────────────────────────────────────────
+  if(view==='register') {
+    const contractors = [...new Set(projectDefects.map(d=>d.contractor).filter(Boolean))];
+    const areas = [...new Set(projectDefects.map(d=>d.area==='__other__'?(d.areaCustom||'Other'):d.area).filter(Boolean))];
+    return (
+      <div style={{display:'flex',flexDirection:'column',minHeight:'100vh'}}>
+        <Header title={currentProject.name} back={()=>setView('projects')} backLabel="Projects"/>
+
+        <div className="register-header">
+          <div className="register-meta">
+            {currentProject.client&&<>{currentProject.client} · </>}{filtered.length}/{projectDefects.length} defects
+            {hasFilters&&<button className="btn-icon btn-sm" style={{marginLeft:6,fontSize:12}} onClick={clearFilters}>✕ Clear filters</button>}
+          </div>
+          <div className="filters">
+            <input className="filter-input" placeholder="Search…" value={filters.search} onChange={e=>setFilter('search',e.target.value)}/>
+            <select className={`filter-select ${filters.status?'filter-active':''}`} value={filters.status} onChange={e=>setFilter('status',e.target.value)}>
+              <option value="">All Status</option>
+              <option>Open</option><option>In Progress</option><option>Closed</option><option>Disputed</option>
+            </select>
+            <select className={`filter-select ${filters.severity?'filter-active':''}`} value={filters.severity} onChange={e=>setFilter('severity',e.target.value)}>
+              <option value="">All Severity</option>
+              <option>Minor</option><option>Major</option><option>Critical</option>
+            </select>
+            {contractors.length>0&&<select className={`filter-select ${filters.contractor?'filter-active':''}`} value={filters.contractor} onChange={e=>setFilter('contractor',e.target.value)}>
+              <option value="">All Contractors</option>
+              {contractors.map(c=><option key={c}>{c}</option>)}
+            </select>}
+            {areas.length>0&&<select className={`filter-select ${filters.area?'filter-active':''}`} value={filters.area} onChange={e=>setFilter('area',e.target.value)}>
+              <option value="">All Areas</option>
+              {areas.map(a=><option key={a}>{a}</option>)}
+            </select>}
+            <div className="register-actions">
+              {role==='staff'&&<button className="btn btn-secondary btn-sm" title="Export to Excel" onClick={()=>exportToExcel(currentProject, filtered)}>↓ Excel</button>}
+            </div>
+          </div>
+        </div>
+
+        <div className="register-body">
+          <div className="register-stats">
+            <div className="stat-card"><div className="stat-num">{stats.total}</div><div className="stat-label">Total</div></div>
+            <div className="stat-card" style={{borderColor:'#dc3545'}}><div className="stat-num" style={{color:'#dc3545'}}>{stats.open}</div><div className="stat-label">Open</div></div>
+            <div className="stat-card" style={{borderColor:'#FF6B00'}}><div className="stat-num" style={{color:'#FF6B00'}}>{stats.critical}</div><div className="stat-label">Critical</div></div>
+            <div className="stat-card" style={{borderColor:'#28a745'}}><div className="stat-num" style={{color:'#28a745'}}>{stats.closed}</div><div className="stat-label">Closed</div></div>
+          </div>
+
+          {filtered.length===0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">{projectDefects.length===0?'🔍':'🔎'}</div>
+              <div className="empty-title">{projectDefects.length===0?'No defects raised':'No defects match filters'}</div>
+              <div style={{fontSize:13}}>{projectDefects.length===0&&role==='staff'?'Tap + to raise the first defect.':''}</div>
+            </div>
+          ) : (
+            <div style={{overflowX:'auto'}}>
+              <table className="defect-table">
+                <thead>
+                  <tr>
+                    <th>ID</th><th>Photo</th><th>Description</th><th>Area</th>
+                    <th>Contractor</th><th>Severity</th><th>Status</th><th>Due</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(d=>{
+                    const area = d.area==='__other__'?(d.areaCustom||'Other'):d.area;
+                    return (
+                      <tr key={d.id} onClick={()=>setViewDefect(d)}>
+                        <td><span className="defect-id">{d.seqId}</span></td>
+                        <td>{d.photos?.length>0?<img className="photo-thumb" src={d.photos[0]} alt=""/>:<div className="photo-placeholder">📷</div>}</td>
+                        <td><div className="defect-desc" title={d.description}>{d.description}</div></td>
+                        <td style={{fontSize:12,color:'var(--gray)'}}>{area||'—'}</td>
+                        <td style={{fontSize:12,color:'var(--gray)'}}>{d.contractor||'—'}</td>
+                        <td><span className={`badge ${severityClass(d.severity)}`}>{d.severity}</span></td>
+                        <td><span className={`badge ${statusClass(d.status)}`}>{d.status}</span></td>
+                        <td style={{fontSize:12,color:d.dueDate&&new Date(d.dueDate)<new Date()&&d.status!=='Closed'?'#dc3545':'var(--gray)'}}>{fmtDate(d.dueDate)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {role==='staff'&&<button className="fab" onClick={()=>setAddDefect(true)} title="Raise Defect">+</button>}
+
+        {addDefect&&<DefectModal project={currentProject} onSave={raiseDefect} onClose={()=>setAddDefect(false)}/>}
+
+        {editDefect&&<DefectModal project={currentProject} defect={editDefect} onSave={updateDefect} onClose={()=>setEditDefect(null)}/>}
+
+        {viewDefect&&<DefectDetail
+          defect={viewDefect}
+          project={currentProject}
+          isClient={role==='client'}
+          onClose={()=>setViewDefect(null)}
+          onEdit={()=>{setEditDefect(viewDefect);setViewDefect(null);}}
+          onStatusChange={s=>updateStatus(viewDefect.id,s)}
+          onDelete={()=>deleteDefect(viewDefect.id)}
+        />}
+
+        {toast&&<div className="toast">{toast}</div>}
+      </div>
+    );
+  }
+
+  return null;
+}
+</script>
+<script>
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(React.createElement(App));
+</script>
+</body>
+</html>
